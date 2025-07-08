@@ -1,0 +1,501 @@
+---
+title: "H2 analysis"
+output: word_document
+date: "June 23, 2025"
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE) #, cache.lazy = FALSE, cache = TRUE
+```
+<br>
+
+## Load libraries and data
+
+<br>
+<br>
+```{r load libraries and data, warning=FALSE, message=FALSE, results='asis'}
+rm(list = ls())
+ root.dir = "C:/Users/mcu08001/Documents/1New Research/H23/Data"
+
+ #load libraries
+library(dplyr); library(ggpubr); library(ggplot2);
+
+#****************************************************************************************
+#load Hansen data
+hans<- read.table("Hansen herit.txt",header=T) 
+hans$Heritability2 = hans$Heritability
+hans$Heritability2[hans$Heritability <0] <- 0 # no negative heritabilities
+hans$Heritability2[hans$Heritability >1] <- 1 # no >1 heritabilities
+
+hans.mdn = median(hans$Heritability2)
+hans.ave = mean(hans$Heritability2)
+hans.n = sum(!is.na(hans$Heritability2))
+
+cat("Hansens's median heritability = ", hans.mdn,  "\n")
+
+cat("Hansens's average heritability = ", hans.ave, "\n")
+
+cat("Hansen's n = ", hans.n, "\n")
+
+# Hans herit for just Life History Traits
+hans.LHT.mdn <- hans %>%
+  filter(Type == "LH") %>%
+  summarise(median = median(Heritability2))
+
+hans.LHT.n <- hans %>%
+  filter(Type == "LH") %>%
+  summarise(n = n())
+
+#****************************************************************************************
+# Load Urban evo app heritability under climate extremes
+urbs<- read.csv("urban herit.csv") 
+urbs <- data.frame(Heritability = urbs$h..harsh.environment,
+trait.type = urbs$trait.type..lht.morpho.physio.behav.) # only use h2s from harsh environment
+
+min(urbs$Heritability, na.rm = T)
+max(urbs$Heritability, na.rm = T)
+
+urbs$Heritability2 <- urbs$Heritability
+urbs$Heritability2[urbs$Heritability >1] <- 1 # no >1 heritabilities
+
+urbs.mdn = median(urbs$Heritability2, na.rm = T)
+urbs.ave = mean(urbs$Heritability2, na.rm = T)
+urbs.n = sum(!is.na(urbs$Heritability2))
+
+cat("Urban's median heritability = ", urbs.mdn,  "\n")
+cat("Urban's average heritability = ", urbs.ave, "\n")
+cat("Urban's n = ", urbs.n, "\n")
+
+# Urban herit for just Life History Traits
+urbs.LHT.mdn <- urbs %>%
+  filter(trait.type == "LHT") %>%
+  summarise(median = median(Heritability2, na.rm = TRUE))
+
+urbs.LHT.n <- urbs %>%
+  filter(trait.type == "LHT") %>%
+  summarise(n = n())
+
+#****************************************************************************************
+#Add Mousseau and Roff data from 'Mousseau graph capture.R"
+load("Mousseau herit.RDS") # Cumulative distribution captured using metaDigitise
+
+min(herit.all, na.rm = T)
+max(herit.all, na.rm = T)
+
+herit.all2 <- herit.all
+herit.all2[herit.all <0] <- 0 # no <0 heritabilities
+herit.all2[herit.all >1] <- 1 # no >1 heritabilities
+
+mouss.mdn = median(herit.all2, na.rm = T)
+mouss.ave = mean(herit.all2, na.rm = T)
+mouss.n = sum(!is.na(herit.all2))
+
+cat("Mousseau's median heritability = ", mouss.mdn, "\n")
+cat("Mousseau's average heritability = ", mouss.ave, "\n")
+cat("Mousseau's n = ", mouss.n)
+
+mouss <- data.frame(herit = herit.all2)
+mouss1 <- data.frame(herit = herit.all)
+# LHT from paper
+
+mouss.LHT.mdn = 0.25 
+mouss.LHT.n = 341
+
+
+
+```
+<br>
+
+## Plot Hansen data
+
+<br>
+<br>
+```{r, plot Hansen data}
+#hans.hist <- hist(hans$Heritability)
+# Define the location for the arrow and text
+arrow_location <- data.frame(x = hans.mdn, y = 4)  # Change these coordinates as needed
+text_label <- "Median = 0.30\n n = 1460"  # Change the text as needed
+
+
+fig1a <- ggplot(hans, aes(x = Heritability2)) +
+  #geom_histogram(binwidth = 0.025, fill = "skyblue", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  geom_density(alpha = 0.2, bounds = c(0, 1), adjust = .5, fill = "#8AAA79") +
+  labs(title = "Hansen et al. 2011", x = "Values", y = "Density") +
+   theme_classic()+
+  theme(axis.title.x = element_blank(), axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+fig1a
+
+# Not constrained h2
+hans.min = min(hans$Heritability)
+hans.max = max(hans$Heritability)
+hans.mdn.all = median(hans$Heritability)
+figS1a <- ggplot(hans, aes(x = Heritability)) +
+  #geom_histogram(binwidth = 0.025, fill = "skyblue", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  geom_density(alpha = 0.2, adjust = .5, bounds = c(-1, 2), fill = "#8AAA79") + #
+  labs(title = "Hansen et al. 2011", x = "Values", y = "Density") +
+   theme_classic()+
+  theme(axis.title.x = element_blank(), axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+figS1a
+```
+<br>
+
+## Plot Urban data
+
+<br>
+<br>
+```{r, plot Urban data}
+#hans.hist <- hist(hans$Heritability)
+# Define the location for the arrow and text
+arrow_location <- data.frame(x = urbs.mdn, y = 4)  # Change these coordinates as needed
+text_label <- "Median = 0.28\n n = 354"  # Change the text as needed
+
+
+fig1b <- ggplot(urbs, aes(x = Heritability2)) +
+  #geom_histogram(binwidth = 0.025, fill = "skyblue", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  geom_density(alpha = 0.2, bounds = c(0, 1), adjust = .5, fill = "#FFA62B") +
+  labs(title = "Urban et al. 2024", x = "Values", y = "Density") +
+   theme_classic()+xlab("Heritability") +
+  theme(axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+fig1b
+
+# Not constrained h2
+urbs.min = min(urbs$Heritability)
+urbs.max = max(urbs$Heritability)
+urbs.mdn.all = median(urbs$Heritability)
+figS1b <- ggplot(urbs, aes(x = Heritability)) +
+  #geom_histogram(binwidth = 0.025, fill = "skyblue", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  geom_density(alpha = 0.2, adjust = .5, bounds = c(-1, 2), fill = "#FFA62B") + #
+  labs(title = "Urban et al. 2024", x = "Values", y = "Density") +
+   theme_classic()+ xlim(-1, 2) +
+  theme(axis.title.x = element_blank(), axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+figS1b
+
+
+
+
+```
+
+<br>
+
+## Plot Mousseau data
+
+<br>
+<br>
+```{r, plot Mousseau data}
+#hans.hist <- hist(hans$Heritability)
+# Define the location for the arrow and text
+arrow_location <- data.frame(x = mouss.mdn, y = 4)  # Change these coordinates as needed
+text_label <- "Median = 0.31\n n = 1121"  # Change the text as needed
+
+fig1c <- ggplot(mouss, aes(x = herit)) +
+  #geom_histogram(binwidth = 0.025, fill = "skyblue", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  geom_density(alpha = 0.2, bounds = c(0, 1), adjust = .5, fill = "#08A4BD") +
+  labs(title = "Mousseau and Roff 1987", x = "Values", y = "Density") +
+   theme_classic()+
+  theme(axis.title.x = element_blank(), axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+fig1c
+
+# Not constrained h2
+mouss.min = min(mouss1$herit)
+mouss.max = max(mouss1$herit)
+mouss.mdn.all = median(mouss1$herit)
+figS1c <- ggplot(mouss1, aes(x = herit)) +
+  #geom_histogram(binwidth = 0.025, fill = "skyblue", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  geom_density(alpha = 0.2, adjust = .5, bounds = c(-1, 2), fill = "#08A4BD") + #
+  labs(title = "Mousseau and Roff 1987", x = "Values", y = "Density") +
+   theme_classic()+ xlim(-1,2) +
+  theme(axis.title.x = element_blank(), axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+figS1c
+
+
+ggarrange(fig1c, NULL, fig1a, NULL, fig1b, nrow = 5, heights = c(3,.4, 3,.4,3))
+ggsave("3 herits.png",width=5,height=10,unit="in",dpi=1200)
+
+ggarrange(figS1c, NULL, figS1a, NULL, figS1b, nrow = 5, heights = c(3,.4, 3,.4,3))
+ggsave("3 herits full range.png",width=5,height=10,unit="in",dpi=1200)
+```
+<br>
+<br>
+
+## Overall values
+
+<br>
+```{r, Combine values,results='asis'}
+urbs.herit=urbs$Heritability2[!is.na(urbs$Heritability2)]
+Overall.herit <- c(urbs.herit,hans$Heritability2,herit.all2)
+
+
+cat("All median heritability = ",median(Overall.herit),"\n")
+cat("All average heritability = ", mean(Overall.herit), "\n")
+cat("All n = ", sum(!is.na(Overall.herit)), "\n")
+quantile(Overall.herit, probs = c(0.025, 0.5, 0.975),na.rm=TRUE)
+quantile(Overall.herit, probs = c(0.25, 0.5, 0.75),na.rm=TRUE)
+
+sum(Overall.herit >0.15)/sum(!is.na(Overall.herit))
+sum(Overall.herit ==0)/sum(!is.na(Overall.herit))
+```
+<br>
+
+## Plot data as histograms instead
+
+<br>
+<br>
+```{r, plot Hansen data hist}
+#hans.hist <- hist(hans$Heritability)
+# Define the location for the arrow and text
+arrow_location <- data.frame(x = hans.mdn, y = 4)  # Change these coordinates as needed
+text_label <- "Median = 0.30\n n = 1460"  # Change the text as needed
+
+
+fig1a <- ggplot(hans, aes(x = Heritability2)) +
+  geom_histogram(binwidth = 0.025, fill = "#8AAA79", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  #geom_density(alpha = 0.2, bounds = c(0, 1), adjust = .5, fill = "#8AAA79") +
+  labs(title = "Hansen et al. 2011", x = "Values", y = "Density") +
+   theme_classic()+
+  theme(axis.title.x = element_blank(), axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+fig1a
+```
+<br>
+
+## Plot Urban data
+
+<br>
+<br>
+```{r, plot Urban data hist}
+#hans.hist <- hist(hans$Heritability)
+# Define the location for the arrow and text
+arrow_location <- data.frame(x = urbs.mdn, y = 4)  # Change these coordinates as needed
+text_label <- "Median = 0.28\n n = 354"  # Change the text as needed
+
+
+fig1b <- ggplot(urbs, aes(x = Heritability2)) +
+  geom_histogram(binwidth = 0.025, fill = "#FFA62B", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  #geom_density(alpha = 0.2, bounds = c(0, 1), adjust = .5, fill = "#FFA62B") +
+  labs(title = "Urban et al. 2024", x = "Values", y = "Density") +
+   theme_classic()+xlab("Heritability") +
+  theme(axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+fig1b
+```
+
+<br>
+
+## Plot Mousseau data
+
+<br>
+<br>
+```{r, plot Mousseau data hist}
+#hans.hist <- hist(hans$Heritability)
+# Define the location for the arrow and text
+arrow_location <- data.frame(x = mouss.mdn, y = 4)  # Change these coordinates as needed
+text_label <- "Median = 0.31\n n = 1121"  # Change the text as needed
+
+fig1c <- ggplot(mouss, aes(x = herit)) +
+  geom_histogram(binwidth = 0.025, fill = "#08A4BD", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  #geom_density(alpha = 0.2, bounds = c(0, 1), adjust = .5, fill = "#08A4BD") +
+  labs(title = "Mousseau and Roff 1987", x = "Values", y = "Density") +
+   theme_classic()+
+  theme(axis.title.x = element_blank(), axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+fig1c
+
+ggarrange(fig1c, NULL, fig1a, NULL, fig1b, nrow = 5, heights = c(3,.4, 3,.4,3))
+
+ggsave("3 herits hist.png",width=5,height=10,unit="in",dpi=1200)
+```
+<br>
+
+## Load libraries and data
+
+<br>
+<br>
+```{r load additive genetic variances, results='asis'}
+# Remove negative evolvabilities
+hans$Evolvability2 = hans$Evolvability
+hans$Evolvability3 = hans$Evolvability
+hans$Evolvability2[hans$Evolvability <0] = 0
+hans$Evolvability3[hans$Evolvability2 >20] = 20
+
+hans.VA.mdn = median(hans$Evolvability2)
+hans.VA.ave = mean(hans$Evolvability2)
+hans.VA.n = sum(!is.na(hans$Evolvability2))
+
+cat("Hansens's median evolvability = ", hans.VA.mdn , "\n")
+cat("Hansens's average evolvability = ", hans.VA.ave, "\n")
+cat("Hansen's VA n = ", hans.VA.n, "\n")
+
+min(hans$Evolvability2)
+max(hans$Evolvability2)
+#****************************************************************************************
+# Load Urban evo app heritability under climate extremes
+urbs2<- read.csv("urban herit.csv") #new file
+urbs2 <- data.frame(Evolvability = urbs2$evolvability.harsh.environment) # only use evolv from harsh environment
+urbs2$Evolvability2 = urbs2$Evolvability
+urbs2$Evolvability2[urbs2$Evolvability >20] = 20
+
+min(urbs2$Evolvability, na.rm = T)
+max(urbs2$Evolvability, na.rm = T)
+
+urbs.VA.mdn = median(urbs2$Evolvability, na.rm = T)
+urbs.VA.ave = mean(urbs2$Evolvability, na.rm = T)
+urbs.VA.n = sum(!is.na(urbs2$Evolvability))
+
+cat("Urban's median evolvability = ", urbs.VA.mdn , "\n")
+cat("Urban's average evolvability = ", urbs.VA.ave, "\n")
+cat("Urban's evo n = ", urbs.VA.n, "\n")
+
+all.VA.mdn = median(c(urbs2$Evolvability,hans$Evolvability2), na.rm = T)
+cat("All evolvability medians = ", all.VA.mdn, "\n")
+                    
+```
+<br>
+
+## Plot Hansen data
+
+<br>
+<br>
+```{r, plot Hansen evo data}
+#hans.hist <- hist(hans$Heritability)
+# Define the location for the arrow and text
+arrow_location <- data.frame(x = hans.VA.mdn, y = 4)  # Change these coordinates as needed
+text_label <- "Median = 0.36\n n = 1460"  # Change the text as needed
+
+
+fig3a <- ggplot(hans, aes(x = Evolvability3)) +
+  #geom_histogram(binwidth = 0.025, fill = "skyblue", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  geom_density(alpha = .2, bounds = c(0, 2), adjust = .5, fill = "#8AAA79") +
+  labs(title = "Hansen et al. 2011", x = "Values", y = "Density") +
+   theme_classic()+ xlim(0,2) + xlab("Evolvability") +
+  theme(axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+fig3a
+ggsave("Evo hist.png",width=5,height=3.3,unit="in",dpi=1200)
+```
+<br>
+
+## Plot Urban evo data
+
+<br>
+<br>
+```{r, plot Urban evo data}
+#hans.hist <- hist(hans$Heritability)
+# Define the location for the arrow and text
+arrow_location <- data.frame(x = urbs.VA.mdn, y = 4)  # Change these coordinates as needed
+text_label <- "Median = 11.1\n n = 144"  # Change the text as needed
+
+
+fig3b <- ggplot(urbs2, aes(x = Evolvability2)) +
+  #geom_histogram(binwidth = 0.025, fill = "skyblue", alpha = 0.1, color = "black", aes(y = ..density..)) +
+  geom_density(alpha = .5, bounds = c(0, 20), adjust = .5, fill = "#FFA62B") +
+  labs(title = "Urban et al. 2024", x = "Values", y = "Density") +
+   theme_classic()+xlab("Evolvability") + ylim(0,1) + 
+  theme(axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") + 
+  annotate("text", x = arrow_location$x, y = arrow_location$y +1.3, label = text_label, vjust = 1.5) +
+  annotate("segment", x = arrow_location$x, xend = arrow_location$x, y = arrow_location$y + 0, yend = arrow_location$y-.8, 
+           arrow = arrow(length = unit(0.1, "inches")))
+fig3b
+```
+<br>
+<br>
+
+# More summary statistics
+
+<br>
+```{r, more sum stats}
+# Estimate proportion of total distribution
+all.herit <- c(hans$Heritability2, urbs$Heritability2, mouss$herit)
+
+#remove NA
+all.herit <- data.frame("heritability" = all.herit[!is.na(all.herit)])
+
+sum(all.herit <0)
+all.herit.n = length(all.herit$heritability)
+
+cat("Median = ", median(all.herit$heritability), "\n")
+cat("N = ", all.herit.n, "\n")
+cat("Proportion of distribution < 0.1 = ", sum(all.herit < 0.1)/all.herit.n, "\n")
+cat("Proportion of distribution < 0.05 = ", sum(all.herit < 0.05)/all.herit.n, "\n")
+cat("Proportion of distribution < 0.01 = ", sum(all.herit < 0.01)/all.herit.n, "\n")
+cat("Proportion of distribution = 0.0 = ", sum(all.herit == 0)/all.herit.n)
+
+arrow_location <- data.frame(x = 0.3, y = 4)  # Change these coordinates as needed
+text_label <- "Median = 0.3\n n = 2935"  # Change the text as needed
+
+# Decile plot
+# Create decile bins based on 'value'
+dplot <- all.herit %>%
+  mutate(decile = ntile(heritability, 10))
+
+# Summarize by decile
+decile_summary <- dplot %>%
+  group_by(decile) %>%
+  summarise(min = min(heritability), max = max(heritability), .groups = 'drop')
+
+# Plot mean outcome by decile
+figS1 <- ggplot(decile_summary, aes(x = factor(decile), ymin = min, ymax = max)) +
+  geom_linerange(size = 5, color = "#8AAA79") +
+  geom_text(aes(y = max, label = round(max, 2)), vjust = -0.3, size = 3.5, color = "darkgray") +
+  geom_text(aes(y = min, label = round(min, 2)), vjust = 1.3, size = 3.5, color = "darkgray") +
+  #geom_hline = (yintercept = 0.3, color = "#08A4BD") + 
+  geom_hline(yintercept = 0.3, linetype = "dashed", color = "darkgray") +
+   annotate("text", x = Inf, y = 0.3, label = "median heritability = 0.3",
+    hjust = 1.1, vjust = -0.5, color = "#8AAA79", size = 4) +
+  labs(x = "Deciles (10% bins)", y = "Heritability", title = "Decile Plot of Range of heritabilities") +
+  theme_classic() +  theme(axis.title=element_text(size=14),axis.text = element_text(size=12),legend.position = "none") 
+
+figS1
+
+# Save figure
+ggsave("Herit all deciles.png",width=8,height=4,unit="in",dpi=1200)
+```
+<br>
+<br>
+## Create table of 1% values
+```{r, percent values table}
+library(knitr)
+
+# Create table of 1% values
+oneherit <- all.herit %>%
+  mutate(heritability = round(heritability, 2))
+
+# Compute frequency and percentages
+herit_table <- oneherit %>%
+  count(heritability) %>%
+  mutate(
+    Percentage = 100 * n / sum(n),
+    "Cumulative percentage" = cumsum(Percentage)
+  )
+
+kable(herit_table, digits = 2, caption = "Heritability percentages")
+```
+
+
+
+
+
